@@ -87,6 +87,10 @@ elapsed time: 0.077248689 seconds (112 bytes allocated)
 You can see that it's more than 20-fold faster and exhibits no unnecessary memory allocation,
 and that it's as fast as if we had manually inlined this function.
 
+## Extensions of core Julia functions
+
+This package contains versions of `map` and `map!` that are enabled for types.
+
 ## Inner workings
 
 The statement `@anon g = x->(x+offset)^2` results in evaluation of the following expression:
