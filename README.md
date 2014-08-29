@@ -56,23 +56,36 @@ function testn{f}(::Type{f}, n)
     s
 end
 
+function test_inlined(n)
+    s = 0.0
+    for i = 1:n
+        s += (i/n+1.2)^2
+    end
+    s
+end
 
 offset = 1.2
 f = x->(x+offset)^2
 @time testn(f, 1)
-julia> @time testn(f, 10^6)
-elapsed time: 0.179762458 seconds (64002280 bytes allocated)
-2.973335033333517e6
+julia> @time testn(f, 10^7)
+elapsed time: 1.984763506 seconds (640006424 bytes allocated, 22.73% gc time)
+2.973333503333424e7
 
-@time testn(f, 10^6)
 @anon g = x->(x+offset)^2
 @time testn(g, 1)
-julia> @time testn(g, 10^6)
-elapsed time: 0.007947288 seconds (112 bytes allocated)
-2.973335033333517e6
+julia> @time testn(g, 10^7)
+elapsed time: 0.076382824 seconds (112 bytes allocated)
+2.973333503333424e7
+
+@time test_inlined(1)
+julia> @time test_inlined(10^7)
+elapsed time: 0.077248689 seconds (112 bytes allocated)
+2.973333503333424e7
+
 ```
 
-You can see that there is a 20-fold speed improvement and no unnecessary memory allocation.
+You can see that it's more than 20-fold faster and exhibits no unnecessary memory allocation,
+and that it's as fast as if we had manually inlined this function.
 
 ## Inner workings
 
@@ -84,8 +97,8 @@ The statement `@anon g = x->(x+offset)^2` results in evaluation of the following
 end
 ```
 Since `g` is a type, `g(x)` results in the constructor being called. We've defined the constructor
-in terms of our anonymous function, taking care to splice in the value of the local variable `offset`.
-One can see that the generated code is well-optimized:
+in terms of the body of our anonymous function, taking care to splice in the value of the local
+variable `offset`. One can see that the generated code is well-optimized:
 ```
 julia> code_llvm(g, (Float64,))
 
