@@ -101,9 +101,9 @@ a new version of `map!` that inlines the new version of `ff`.
 Obviously, this is worthwhile only in cases where
 compilation time is dwarfed by execution time.
 
-## Difference from regular anonymous functions
+## Differences from regular anonymous functions
 
-There is one important difference: updating any parameters does not get reflected
+Updating any parameters does not get reflected
 in the output of the anonymous function. For instance:
 ```
 offset = 1.2
@@ -138,13 +138,12 @@ This package contains versions of `map` and `map!` that are enabled for types.
 The statement `g = @anon x->(x+offset)^2` results in evaluation of something similar to
 the following expression:
 ```julia
-  typename = gensym()
-  eval(quote
-      immutable $typename end
-      $typename(x) = (x+$offset)^2
-      $typename
-  end)
-end
+typename = gensym()
+eval(quote
+    immutable $typename end
+    $typename(x) = (x+$offset)^2
+    $typename
+end)
 ```
 `g` will be assigned the value of `typename`. Since `g` is a type, `g(x)` results
 in the constructor being called. We've defined the constructor
