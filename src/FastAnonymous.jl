@@ -7,45 +7,49 @@ export @anon
 
 #### @anon
 
-anon_usage() = error("Usage: @anon f = x -> x+a")
+anon_usage() = error("Usage: f = @anon x -> x+a")
+
+getargs(funcargs::Symbol) = (funcargs,)
+getargs(funcargs::Expr) = tuple(funcargs.args...)
 
 macro anon(ex)
-    isa(ex, Expr) && ex.head == :(=) || anon_usage()
-    typename = ex.args[1]
-    isa(typename, Symbol) || anon_usage()
-    fanon = ex.args[2]
-    exconstr = anon2gen(typename, fanon)
-    exnew = quote
-        immutable $typename end
-        $exconstr
+    arglist, body = anonsplice(ex)
+    qargs = map(x->Expr(:quote, x), arglist)
+    qbody = QuoteNode(body)
+    ex = quote
+        typename = gensym()
+        eval(quote
+            immutable $typename end
+            $typename($($(qargs...))) = $($qbody)
+            $typename
+        end)
     end
-    Expr(:call, esc(:eval), QuoteNode(exnew))
+    :($(esc(ex)))
 end
 
-function anon2gen(genfuncname, anon::Expr)
-    anon.head in (:function, :->) || error("Must pass an anonymous function")
-    argex = anon.args[1]
-    if isa(argex, Symbol)
-        arglist = (argex,)
-    elseif isa(argex, Expr) && (argex::Expr).head == :tuple
-        arglist = tuple(argex.args...)
-        for a in arglist
-            if !isa(a, Symbol)
-                anon_usage()
-            end
-        end
-    else
-        anon_usage()
-    end
+# For variables s other than those in the arglist, replace s with $s
+# This will cause local variables to have their values spliced in.
+function anonsplice(anon::Expr)
+    anon.head in (:function, :->) || anon_usage()
+    arglist = tupleargs(anon.args[1])
     body = anon.args[2]
     if isa(body, Expr)
-        # For any variables s other than arg, replace s with $s
         body = replace_except!(body, arglist)
     end
-    ex = quote
-        $genfuncname($(arglist...)) = $body
-    end
+    arglist, body
 end
+
+tupleargs(funcargs::Symbol) = (funcargs,)
+function tupleargs(funcargs::Expr)
+    funcargs.head == :tuple || anon_usage()
+    for i = 1:length(funcargs.args)
+        if !isa(funcargs.args[i], Symbol)
+            anon_usage()
+        end
+    end
+    tuple(funcargs.args...)
+end
+tupleargs(funcargs) = anon_usage()
 
 function replace_except!(body::Expr, arglist)
     body.head == :line && return body

@@ -26,7 +26,7 @@ You can make it more performant by adding the `@anon` macro:
 using FastAnonymous
 
 offset = 1.2
-@anon f = x->(x+offset)^2
+f = @anon x->(x+offset)^2
 ```
 You can use `f` like an ordinary function. If you want to pass this as an argument to another function,
 it's best to declare that function in the following way:
@@ -87,20 +87,39 @@ elapsed time: 0.077248689 seconds (112 bytes allocated)
 You can see that it's more than 20-fold faster and exhibits no unnecessary memory allocation,
 and that it's as fast as if we had manually inlined this function.
 
+It even works inside of functions. Here's a demonstration:
+```julia
+function testwrap(dest, A, offset)
+    ff = @anon x->(x+offset)^2
+    map!(ff, dest, A)
+end
+```
+It will generate a new version of the function each time you call `testwrap`,
+so that passing in a different value for `offset` works as you'd expect.
+In addition to building a new `ff`, this of course forces compilation of
+a new version of `map!` that inlines the new version of `ff`.
+Obviously, this is worthwhile only in cases where
+compilation time is dwarfed by execution time.
+
 ## Extensions of core Julia functions
 
 This package contains versions of `map` and `map!` that are enabled for types.
 
 ## Inner workings
 
-The statement `@anon g = x->(x+offset)^2` results in evaluation of the following expression:
+The statement `g = @anon x->(x+offset)^2` results in evaluation of something similar to
+the following expression:
 ```julia
-@eval begin
-  immutable g end
-  @eval g(x) = (x + $offset)^2
+  typename = gensym()
+  eval(quote
+      immutable $typename end
+      $typename(x) = (x+$($offset))^2
+      $typename
+  end)
 end
 ```
-Since `g` is a type, `g(x)` results in the constructor being called. We've defined the constructor
+`g` will be assigned the value of `typename`. Since `g` is a type, `g(x)` results
+in the constructor being called. We've defined the constructor
 in terms of the body of our anonymous function, taking care to splice in the value of the local
 variable `offset`. One can see that the generated code is well-optimized:
 ```
@@ -120,7 +139,8 @@ return value, and a second time to create the type and constructor in the caller
 
 This package is based on ideas suggested on the Julia mailing lists by [Mike Innes](https://groups.google.com/d/msg/julia-users/NZGMP-oa4T0/3q-sZwS9PyEJ)
 and [Rafael Fourquet](https://groups.google.com/d/msg/julia-users/qscRyNqRrB4/_b6ERCCoh88J).
-The final ingredients are splicing of local variables and the proper quoting to support cross-module evaluation in functions.
+The final ingredients are splicing of local variables, getting it working inside functions,
+and the proper quoting to support cross-module evaluation in functions.
 
 This package can be viewed in part as an alternative syntax to the excellent
 [NumericFuns](https://github.com/lindahua/NumericFuns.jl),
