@@ -7,13 +7,24 @@ export @anon
 
 #### @anon
 
-anon_usage() = error("Usage: @anon f = x -> x+a")
+anon_usage() = error("Usage: @anon f = x -> x+a or @anon x -> x+a")
 
 macro anon(ex)
-    isa(ex, Expr) && ex.head == :(=) || anon_usage()
-    typename = ex.args[1]
-    isa(typename, Symbol) || anon_usage()
-    fanon = ex.args[2]
+    if !isa(ex, Expr)
+        anon_usage()
+    end
+
+    if ex.head == :(=)
+        typename = ex.args[1]
+        isa(typename, Symbol) || anon_usage()
+        fanon = ex.args[2]
+    elseif ex.head == :(->)
+        typename = gensym() # nobody needs to know
+        fanon = ex
+    else
+        anon_usage()
+    end
+
     exnew = anon2gen(typename, fanon)
     quote
         immutable $typename end
