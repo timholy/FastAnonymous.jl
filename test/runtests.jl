@@ -31,3 +31,12 @@ map!(gray, y, c)
 @test (@allocated map!(gray, y, c)) == 0
 map!(gray, y, x)
 @test (@allocated map!(gray, y, x)) == 0
+
+# Does it work in a function?
+function testwrap(dest, A, offset)
+    @anon ff = x->(x+offset)^2
+    map!(ff, dest, A)
+    @allocated map!(ff, dest, A)
+end
+
+@test testwrap(y, x, 1.2) == 0

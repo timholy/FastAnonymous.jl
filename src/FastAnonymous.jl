@@ -14,11 +14,12 @@ macro anon(ex)
     typename = ex.args[1]
     isa(typename, Symbol) || anon_usage()
     fanon = ex.args[2]
-    exnew = anon2gen(typename, fanon)
-    quote
+    exconstr = anon2gen(typename, fanon)
+    exnew = quote
         immutable $typename end
-        @eval $(esc(exnew))
+        $exconstr
     end
+    Expr(:call, esc(:eval), QuoteNode(exnew))
 end
 
 function anon2gen(genfuncname, anon::Expr)

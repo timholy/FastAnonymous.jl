@@ -118,9 +118,9 @@ return value, and a second time to create the type and constructor in the caller
 
 ## Acknowledgments
 
-This package is based on ideas suggested by [Mike Innes](https://groups.google.com/d/msg/julia-users/NZGMP-oa4T0/3q-sZwS9PyEJ)
-and [Rafael Fourquet](https://groups.google.com/d/msg/julia-users/qscRyNqRrB4/_b6ERCCoh88J) on the Julia mailing lists.
-Tim Holy added the local-variable splicing.
+This package is based on ideas suggested on the Julia mailing lists by [Mike Innes](https://groups.google.com/d/msg/julia-users/NZGMP-oa4T0/3q-sZwS9PyEJ)
+and [Rafael Fourquet](https://groups.google.com/d/msg/julia-users/qscRyNqRrB4/_b6ERCCoh88J).
+The final ingredients are splicing of local variables and the proper quoting to support cross-module evaluation in functions.
 
 This package can be viewed in part as an alternative syntax to the excellent
 [NumericFuns](https://github.com/lindahua/NumericFuns.jl),
