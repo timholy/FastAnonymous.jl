@@ -101,6 +101,34 @@ a new version of `map!` that inlines the new version of `ff`.
 Obviously, this is worthwhile only in cases where
 compilation time is dwarfed by execution time.
 
+## Difference from regular anonymous functions
+
+There is one important difference: updating any parameters does not get reflected
+in the output of the anonymous function. For instance:
+```
+offset = 1.2
+f = x->(x+offset)^2
+julia> f(2.8)
+16.0
+
+offset = 2.2
+julia> f(2.8)
+25.0
+```
+but
+```
+using FastAnonymous
+offset = 1.2
+f = @anon x->(x+offset)^2
+julia> f(2.8)
+16.0
+
+offset = 2.2
+julia> f(2.8)
+16.0
+```
+The value of any parameters gets "frozen in" at the time of construction.
+
 ## Extensions of core Julia functions
 
 This package contains versions of `map` and `map!` that are enabled for types.
