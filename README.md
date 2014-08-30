@@ -71,7 +71,7 @@ julia> @time testn(f, 10^7)
 elapsed time: 1.984763506 seconds (640006424 bytes allocated, 22.73% gc time)
 2.973333503333424e7
 
-@anon g = x->(x+offset)^2
+g = @anon x->(x+offset)^2
 @time testn(g, 1)
 julia> @time testn(g, 10^7)
 elapsed time: 0.076382824 seconds (112 bytes allocated)
