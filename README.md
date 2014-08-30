@@ -113,7 +113,7 @@ the following expression:
   typename = gensym()
   eval(quote
       immutable $typename end
-      $typename(x) = (x+$($offset))^2
+      $typename(x) = (x+$offset)^2
       $typename
   end)
 end
