@@ -64,6 +64,7 @@ function test_inlined(n)
     s
 end
 
+# Conventional anonymous function
 offset = 1.2
 f = x->(x+offset)^2
 @time testn(f, 1)
@@ -71,12 +72,21 @@ julia> @time testn(f, 10^7)
 elapsed time: 1.984763506 seconds (640006424 bytes allocated, 22.73% gc time)
 2.973333503333424e7
 
+# Hard-wired generic function
+sqroffset(x) = (x+1.2)^2
+@time testn(sqroffset, 1)
+julia> @time testn(sqroffset, 10^7)
+elapsed time: 1.091590794 seconds (480006280 bytes allocated, 33.37% gc time)
+2.973333503333424e7
+
+# @anon-ized function
 g = @anon x->(x+offset)^2
 @time testn(g, 1)
 julia> @time testn(g, 10^7)
 elapsed time: 0.076382824 seconds (112 bytes allocated)
 2.973333503333424e7
 
+# Full manual inlining
 @time test_inlined(1)
 julia> @time test_inlined(10^7)
 elapsed time: 0.077248689 seconds (112 bytes allocated)
@@ -84,8 +94,10 @@ elapsed time: 0.077248689 seconds (112 bytes allocated)
 
 ```
 
-You can see that it's more than 20-fold faster and exhibits no unnecessary memory allocation,
-and that it's as fast as if we had manually inlined this function.
+You can see that it's more than 20-fold faster than the anonymous-function version,
+and more than tenfold faster than the generic function version.
+Indeed, it's as fast as if we had manually inlined this function.
+Relatedly, it also exhibits no unnecessary memory allocation.
 
 It even works inside of functions. Here's a demonstration:
 ```julia
@@ -101,7 +113,7 @@ a new version of `map!` that inlines the new version of `ff`.
 Obviously, this is worthwhile only in cases where
 compilation time is dwarfed by execution time.
 
-## Differences from regular anonymous functions
+## `@anon` does not make closures: differences from regular anonymous functions
 
 Updating any parameters does not get reflected
 in the output of the anonymous function. For instance:
@@ -161,6 +173,9 @@ top:
 ```
 One small downside is the fact that `eval` ends up being called twice, once to evaluate the macro's
 return value, and a second time to create the type and constructor in the caller's module.
+
+Note that any local variables used in `@anon` persist
+for the duration of your session and cannot be garbage-collected.
 
 ## Acknowledgments
 
