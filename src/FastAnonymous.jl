@@ -1,4 +1,5 @@
 module FastAnonymous
+using Compat
 using Base.Cartesian
 
 import Base: map, map!
@@ -14,17 +15,18 @@ getargs(funcargs::Expr) = tuple(funcargs.args...)
 
 macro anon(ex)
     arglist, body = anonsplice(ex)
-    qargs = map(x->Expr(:quote, x), arglist)
-    qbody = QuoteNode(body)
+    qbody = Expr(:quote, body)
     ex = quote
         typename = gensym()
-        eval(quote
+        excall = Expr(:call, typename, $arglist...)
+        extotal = quote
             immutable $typename end
-            $typename($($(qargs...))) = $($qbody)
+            $excall = $($qbody)
             $typename
-        end)
+        end
+        eval(extotal)
     end
-    :($(esc(ex)))
+    esc(ex)
 end
 
 # For variables s other than those in the arglist, replace s with $s
@@ -82,7 +84,7 @@ end
 map!{f}(::Type{f}, dest::AbstractVector, r::Range) = _map!(f, dest, r)
 map!{f}(::Type{f}, dest::AbstractArray, r::Range)  = _map!(f, dest, r)
 function _map!{f}(::Type{f}, dest::AbstractArray, r::Range)
-    length(dest) == length(r) || throw(DimensionMismatch("length of dest and r must match"))    
+    length(dest) == length(r) || throw(DimensionMismatch("length of dest and r must match"))
     i = 1
     for ri in r
         @inbounds dest[i] = f(ri)
