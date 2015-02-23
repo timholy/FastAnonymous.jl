@@ -1,33 +1,42 @@
 module FastAnonymous
-# using Base.Cartesian
 
 import Base: call, map, map!, show
 
 export @anon
 
-abstract AbstractClosure{ext,argnames,V}  # V is the number of environment variables
+# ast_p is a pointer to the AST stored as a field in the object itself.
+# This has two purposes:
+#   - it serves, along with the ast_hash, as a unique identifier to control dispatch
+#   - we'll use it to fish out the actual AST from the stagedfunction, which
+#     does not otherwise have access to values.
+# argnames is a tuple holding the names of anonymous-function input arguments
+# V is the number of environment variables stored in the object
+abstract AbstractClosure{ast_p,ast_hash,argnames,V}
+
 
 #### Functions that only depend on values that are supplied as arguments
 
 # Having this type reduces the number of types we have to generate
 
-immutable Fun{ext,argnames} <: AbstractClosure{ext,argnames,0} end  # ext is an "expression tuple"
+immutable Fun{ast_p,ast_hash,argnames} <: AbstractClosure{ast_p,ast_hash,argnames,0}
+    ast::Expr     # ast_p is a pointer to ast
+end
 
-Fun(ex, argnames::(Symbol...)) = Fun{expr2tuple(ex), argnames}()
+Fun(ast, argnames::(Symbol...)) = Fun{pointer_from_objref(ast), hash(ast), argnames}(ast)
 
-stagedfunction call{ext,argnames}(f::Fun{ext,argnames}, __X__...)
+stagedfunction call{ast_p,ast_hash,argnames}(f::Fun{ast_p,ast_hash,argnames}, __X__...)
     n = length(__X__)
     if length(argnames) != n
         return :(error(f, " called with ", $n, " arguments"))
     end
-    ex = tuple2expr(ext)
-    Expr(:block, Expr(:meta, :inline), [:($(argnames[i]) = __X__[$i]) for i = 1:n]..., ex)
+    ast = unsafe_pointer_to_objref(ast_p)
+    Expr(:block, Expr(:meta, :inline), [:($(argnames[i]) = __X__[$i]) for i = 1:n]..., ast)
 end
 
-show{ext,argnames}(io::IO, f::Fun{ext,argnames}) = showanon(io, ext, argnames)
+show{ast_p,ast_hash,argnames}(io::IO, f::Fun{ast_p,ast_hash,argnames}) = showanon(io, ast_p, argnames)
 
-function showanon(io, ext, argnames)
-    ex = tuple2expr(ext)
+function showanon(io, ast_p, argnames)
+    ast = unsafe_pointer_to_objref(ast_p)
     print(io, '(')
     first = true
     for a in argnames
@@ -38,7 +47,7 @@ function showanon(io, ext, argnames)
         print(io, a)
     end
     print(io, ") -> ")
-    show(io, ex)
+    show(io, ast)
 end
 
 #### @anon
@@ -50,7 +59,7 @@ macro anon(ex)
     arglist = tupleargs(ex.args[1])
     body = ex.args[2]
     syms = nonarg_symbols(body, arglist)
-    scopedbody = scopecalls(symbol(current_module()), body)
+    scopedbody = scopecalls(current_module(), body)
     qbody = Expr(:quote, scopedbody)
     if isempty(syms)
         return :(Fun($(esc(qbody)), $arglist))
@@ -71,11 +80,11 @@ stagedfunction closure{fieldnames,TT}(ex, argnames::(Symbol...), ::Type{fieldnam
     :($typename(ex, argnames, values...))
 end
 
-function show{ext,argnames,N}(io::IO, c::AbstractClosure{ext,argnames,N})
-    showanon(io, ext, argnames)
+function show{ast_p,ast_hash,argnames,N}(io::IO, c::AbstractClosure{ast_p,ast_hash,argnames,N})
+    showanon(io, ast_p, argnames)
     print(io, "\nwith:")
     fieldnames = names(typeof(c))
-    for i = 1:N
+    for i = 2:N+1
         print(io, "\n  ", fieldnames[i], ": ", getfield(c, i))
     end
 end
@@ -86,29 +95,30 @@ popval{T}(::Type{Val{T}}) = T
 function getclosure(fieldnames::(Symbol...), fieldtypes)
     # Build the type
     typename = gensym("Closure")
-    extype = :($typename{ext,argnames})
+    extype = :($typename{ast_p,ast_hash,argnames})
     M = length(fieldnames)
     fields = [Expr(:(::), fieldnames[i], fieldtypes[i]) for i = 1:M]
-    extypedef = Expr(:type, true, Expr(:(<:), extype, :(AbstractClosure{ext,argnames,$M})), Expr(:block, fields...))
+    unshift!(fields, :(ast::Expr))
+    extypedef = Expr(:type, true, Expr(:(<:), extype, :(AbstractClosure{ast_p,ast_hash,argnames,$M})), Expr(:block, fields...))
     eval(extypedef)
     # Build the constructor
-    exconstr = :($typename(ex,argnames,values...) = $typename{expr2tuple(ex),argnames}(values...))
+    exconstr = :($typename(ast,argnames,values...) = $typename{pointer_from_objref(ast),hash(ast),argnames}(ast,values...))
     eval(exconstr)
     # Overload call
     fieldassign = [:($(fieldnames[i]) = f.$(fieldnames[i])) for i = 1:M]
     excall = quote
-        stagedfunction call{ext,argnames}(f::$extype, __X__...)
+        stagedfunction call{ast_p,ast_hash,argnames}(f::$extype, __X__...)
             n = length(__X__)
             N = length(argnames)
             if n != N
                 return :(error(f, " called with ", $n, " arguments"))
             end
-            ex = tuple2expr(ext)
+            ast = unsafe_pointer_to_objref(ast_p)
             Expr(:block,
                  Expr(:meta, :inline),
                  [:($(argnames[i]) = __X__[$i]) for i = 1:N]...,
                  $fieldassign...,
-                 ex)
+                 ast)
         end
     end
     eval(excall)
@@ -148,23 +158,6 @@ end
 tupleargs(funcargs) = anon_usage()
 
 
-function expr2tuple(ex::Expr)
-    args = [expr2tuple(a) for a in ex.args]
-    tuple(ex.head, args...)
-end
-expr2tuple(q::QuoteNode) = q.value
-expr2tuple(s) = s
-
-function tuple2expr(t::Tuple)
-    args = [tuple2expr(t[i]) for i = 2:length(t)]
-    if t[1] == :.
-        args[2] = QuoteNode(args[2])
-    end
-    Expr(t[1], args...)
-end
-tuple2expr(s) = s
-
-
 scopecalls(mod, body) = scopecalls!(mod, deepcopy(body))
 
 function scopecalls!(mod, ex::Expr)
@@ -196,7 +189,7 @@ end
 # To resolve some ambiguities
 map!(f::AbstractClosure, dest::AbstractVector, r::Range) = _map!(f, dest, r)
 map!(f::AbstractClosure, dest::AbstractArray, r::Range)  = _map!(f, dest, r)
-function _map!{ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::AbstractArray, r::Range)
+function _map!{ast_p,argnames,V}(f::AbstractClosure{ast_p,argnames,V}, dest::AbstractArray, r::Range)
     length(dest) == length(r) || throw(DimensionMismatch("length of dest and r must match"))
     i = 1
     for ri in r
@@ -206,7 +199,7 @@ function _map!{ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::Abstrac
     dest
 end
 
-function map!{T,S,N,ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::AbstractArray{S,N}, A::AbstractArray{T,N})
+function map!{T,S,N,ast_p,argnames,V}(f::AbstractClosure{ast_p,argnames,V}, dest::AbstractArray{S,N}, A::AbstractArray{T,N})
     for d = 1:N
         size(dest,d) == size(A,d) || throw(DimensionMismatch("size of dest and A must match"))
     end
@@ -216,7 +209,7 @@ function map!{T,S,N,ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::Ab
     dest
 end
 
-function map!{T,N,ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::AbstractArray, A::AbstractArray{T,N})
+function map!{T,N,ast_p,argnames,V}(f::AbstractClosure{ast_p,argnames,V}, dest::AbstractArray, A::AbstractArray{T,N})
     length(dest) == length(A) || throw(DimensionMismatch("length of dest and A must match"))
     k = 0
     for a in A
@@ -225,7 +218,7 @@ function map!{T,N,ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, dest::Abst
     dest
 end
 
-function map_to!{T,ext,argnames,V}(f::AbstractClosure{ext,argnames,V}, offs, dest::AbstractArray{T}, A::AbstractArray)
+function map_to!{T,ast_p,argnames,V}(f::AbstractClosure{ast_p,argnames,V}, offs, dest::AbstractArray{T}, A::AbstractArray)
     # map to dest array, checking the type of each result. if a result does not
     # match, widen the result type and re-dispatch.
     @inbounds for i = offs:length(A)
