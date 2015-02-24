@@ -4,6 +4,9 @@ Creating efficient "anonymous functions" in [Julia](http://julialang.org/).
 
 [![Build Status](https://travis-ci.org/timholy/FastAnonymous.jl.svg?branch=master)](https://travis-ci.org/timholy/FastAnonymous.jl)
 
+There are two implementations, one that runs on julia 0.3 and the other for julia 0.4.
+If you're running julia 0.4, see the relevant [README](doc/README_0.4.md).
+
 ## Installation
 
 Install this package within Julia using
