@@ -162,7 +162,7 @@ scopecalls(mod, body) = scopecalls!(mod, deepcopy(body))
 
 function scopecalls!(mod, ex::Expr)
     if ex.head == :call
-        ex.args[1] = Expr(:., mod, QuoteNode(ex.args[1]))
+        ex.args[1] = modscope(mod, ex.args[1])
         startarg = 2
     else
         startarg = 1
@@ -172,8 +172,14 @@ function scopecalls!(mod, ex::Expr)
     end
     ex
 end
-
 scopecalls!(mod, arg) = arg
+
+modscope(mod, sym::Symbol) = Expr(:., mod, QuoteNode(sym))
+function modscope(mod, ex::Expr)
+    ex.head == :quote && return modscope(mod, ex.args[1])
+    ex.head == :. || error("unsupported expression ", ex)
+    modscope(modscope(mod, ex.args[1]), ex.args[2])
+end
 
 
 #### Methods using @anon-created "functions"

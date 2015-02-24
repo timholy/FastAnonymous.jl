@@ -44,3 +44,20 @@ end
 @test y[1] == (x[1]+1.2)^2
 @test testwrap(y, x, 3.4) == 0
 @test y[1] == (x[1]+3.4)^2
+
+# Does it work across modules?
+module TestMod
+mysquare(x) = x^2
+end
+
+f = @anon x->TestMod.mysquare(x)
+@test f(3) == 9
+
+module TestMod2
+export mycube
+mycube(x) = x^3
+end
+
+using TestMod2
+f = @anon x->mycube(x)
+@test f(-2) == -8
