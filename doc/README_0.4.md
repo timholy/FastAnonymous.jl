@@ -94,7 +94,7 @@ with:
 you can see the function definition as `^(+(x,offset),2)` which is equivalent to `(x+offset)^2`.
 At the end, you see the "environment," which consists of stored values, in this case `offset: 1.2`.
 After creating `f`, you can change environmental variables:
-```
+```julia
 julia> f.offset = -7
 -7.0
 
@@ -103,6 +103,7 @@ julia> f(7)
 
 julia> f(9)
 4.0
+```
 
 Any symbols that are not arguments end up in environmental variables. As a second example:
 
