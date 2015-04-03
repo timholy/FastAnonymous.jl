@@ -137,10 +137,6 @@ with:
   x: [0.0,15.0,0.0634665,0.0951998,0.126933,0.158666,0.1904,0.222133,0.253866,0.285599  …  2.85599,2.88773,2.91946,2.95119,2.98293,3.01466,3.04639,3.07813,3.10986,3.14159]
 ```
 
-## Extensions of core Julia functions
-
-This package contains versions of `map` and `map!` that are enabled for types.
-
 ## Inner workings
 
 This package uses shameless hacks to implement closures that behave much like
