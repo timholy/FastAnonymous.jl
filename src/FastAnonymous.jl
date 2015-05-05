@@ -22,9 +22,9 @@ immutable Fun{ast_p,ast_hash,argnames} <: AbstractClosure{ast_p,ast_hash,argname
     ast::Expr     # ast_p is a pointer to ast
 end
 
-Fun(ast, argnames::(Symbol...)) = Fun{pointer_from_objref(ast), hash(ast), argnames}(ast)
+Fun(ast, argnames::Tuple{Vararg{Symbol}}) = Fun{pointer_from_objref(ast), hash(ast), argnames}(ast)
 
-stagedfunction call{ast_p,ast_hash,argnames}(f::Fun{ast_p,ast_hash,argnames}, __X__...)
+@generated function call{ast_p,ast_hash,argnames}(f::Fun{ast_p,ast_hash,argnames}, __X__...)
     n = length(__X__)
     if length(argnames) != n
         return :(error(f, " called with ", $n, " arguments"))
@@ -65,7 +65,8 @@ macro anon(ex)
         return :(Fun($(esc(qbody)), $arglist))
     end
     symst = tuple(syms...)
-    fields = map(x->Val{x}, symst)
+    # fields = map(x->Val{x}, symst)
+    fields = Val{symst}
     values = Expr(:tuple, [esc(v) for v in symst]...)
     :(closure($(esc(qbody)), $arglist, $fields, $values))
 end
@@ -73,26 +74,28 @@ end
 #### closure generates types as needed
 # Note that these are "value" closures: they store the values at time of construction
 # (Usual statements about reference objects, like arrays, apply)
-stagedfunction closure{fieldnames,TT}(ex, argnames::(Symbol...), ::Type{fieldnames}, values::TT)
-    N = length(fieldnames)
-    length(values) == N || error("Number of values must match number of fields")
-    typename = getclosure(fieldnames, values)
-    :($typename(ex, argnames, values...))
+@generated function closure{fieldnames_type,TT}(ex, argnames::Tuple{Vararg{Symbol}}, ::Type{fieldnames_type}, values_type::TT)
+    fieldnames_tuple = fieldnames_type.parameters[1]
+    N = length(fieldnames_tuple)
+    values_tuple = values_type.parameters
+    length(values_tuple) == N || error("Number of values must match number of fields")
+    typename = getclosure(fieldnames_tuple, values_tuple)
+    :($typename(ex, argnames, values_type...))
 end
 
 function show{ast_p,ast_hash,argnames,N}(io::IO, c::AbstractClosure{ast_p,ast_hash,argnames,N})
     showanon(io, ast_p, argnames)
     print(io, "\nwith:")
-    fieldnames = names(typeof(c))
+    fields = fieldnames(typeof(c))
     for i = 2:N+1
-        print(io, "\n  ", fieldnames[i], ": ", getfield(c, i))
+        print(io, "\n  ", fields[i], ": ", getfield(c, i))
     end
 end
 
 getclosure(fieldnames, fieldtypes) = getclosure(map(popval, fieldnames), fieldtypes)
 popval{T}(::Type{Val{T}}) = T
 
-function getclosure(fieldnames::(Symbol...), fieldtypes)
+function getclosure(fieldnames::Tuple{Vararg{Symbol}}, fieldtypes)
     # Build the type
     typename = gensym("Closure")
     extype = :($typename{ast_p,ast_hash,argnames})
@@ -107,7 +110,7 @@ function getclosure(fieldnames::(Symbol...), fieldtypes)
     # Overload call
     fieldassign = [:($(fieldnames[i]) = f.$(fieldnames[i])) for i = 1:M]
     excall = quote
-        stagedfunction call{ast_p,ast_hash,argnames}(f::$extype, __X__...)
+        @generated function call{ast_p,ast_hash,argnames}(f::$extype, __X__...)
             n = length(__X__)
             N = length(argnames)
             if n != N
