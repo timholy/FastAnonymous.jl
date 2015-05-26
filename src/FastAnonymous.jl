@@ -1,5 +1,7 @@
 module FastAnonymous
 
+using Debug
+
 import Base: call, map, map!, show
 
 export @anon
@@ -130,23 +132,30 @@ end
 
 #### Utilities
 
-nonarg_symbols(body, arglist) = nonarg_symbols!(Set{Symbol}(), body, arglist)
+function nonarg_symbols(body, arglist)
+    node = Debug.Analysis.analyze(Debug.AST.child("", Debug.AST.NoEnv()), body, true)
+    nonarg_symbols!(node, Set(arglist), Set{Symbol}())
+end
 
-function nonarg_symbols!(s, ex::Expr, arglist)
-    ex.head == :line && return s
-    startarg = ex.head == :call ? 2 : 1
-    for i = startarg:length(ex.args)
-        nonarg_symbols!(s, ex.args[i], arglist)
-    end
-    s
+function nonarg_symbols!(node::Debug.AST.Node{Symbol}, scope, nonlocal_vars)
+    (node.value in scope) || push!(nonlocal_vars, node.value)
+    nonlocal_vars
 end
-function nonarg_symbols!(s, sym::Symbol, arglist)
-    if !(sym in arglist)
-        push!(s, sym)
+
+function nonarg_symbols!(node::Debug.AST.Node{Debug.AST.ExValue}, scope, nonlocal_vars)
+    scope = union(scope, scopeof(node.state))
+    start_arg = node.value.head==:call ? 2 : 1
+    for child in node.value.args[start_arg:end]
+        nonarg_symbols!(child, scope, nonlocal_vars)
     end
-    s
+    nonlocal_vars
 end
-nonarg_symbols!(s, a, arglist) = s
+
+nonarg_symbols!(node::Debug.AST.Node, scope, nonlocal_vars) = nonlocal_vars
+
+scopeof(state::Debug.Analysis.SimpleState) = state.env.defined
+scopeof(state::Debug.Analysis.SplitDef) = union(state.ls.defined, state.rs.defined)
+scopeof(state) = Set{Symbol}()
 
 tupleargs(funcargs::Symbol) = (funcargs,)
 function tupleargs(funcargs::Expr)
