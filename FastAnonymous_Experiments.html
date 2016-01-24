@@ -177,10 +177,7 @@ div#notebook {
 <div class=" highlight hl-julia"><pre><span class="n">cd</span><span class="p">(</span><span class="s">&quot;/Users/cedric/Programa/Mario&quot;</span><span class="p">)</span>
 <span class="n">push</span><span class="o">!</span><span class="p">(</span><span class="n">LOAD_PATH</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)</span>
 <span class="k">using</span> <span class="n">Autoreload</span>
-<span class="n">arequire</span><span class="p">(</span><span class="s">&quot;Utils&quot;</span><span class="p">)</span>
-<span class="k">using</span> <span class="n">MacroTools</span><span class="p">:</span> <span class="p">@</span><span class="n">capture</span>
 <span class="k">using</span> <span class="n">Utils</span>
-<span class="n">arequire</span><span class="p">(</span><span class="s">&quot;FastAnonymous&quot;</span><span class="p">)</span>
 
 <span class="k">using</span> <span class="n">FastAnonymous</span><span class="p">:</span> <span class="p">@</span><span class="n">anon</span>
 <span class="k">using</span> <span class="n">Benchmarks</span>
@@ -196,24 +193,13 @@ div#notebook {
 
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>WARNING: &#96;require&#96; is deprecated, use &#96;using&#96; or &#96;import&#96; instead
- in depwarn at deprecated.jl:73
- [inlined code] from deprecated.jl:694
- in require at no file:0
- in arequire at /Users/cedric/.julia/v0.4/Autoreload/src/Autoreload.jl:87
- in include_string at loading.jl:266
- in execute_request_0x535c5df2 at /Users/cedric/.julia/v0.4/IJulia/src/execute_request.jl:177
- in eventloop at /Users/cedric/.julia/v0.4/IJulia/src/IJulia.jl:141
- in anonymous at task.jl:447
-while loading In[1], in expression starting on line 4
-WARNING: New definition 
+<pre>WARNING: New definition 
     valid_index(AbstractArray{#T&lt;:Any, #N&lt;:Any}, Base.IteratorsMD.CartesianIndex{#N&lt;:Any}) at /Users/cedric/Programa/Mario/Utils.jl:70
 is ambiguous with: 
     valid_index(AbstractArray{#T&lt;:Any, 1}, Any) at /Users/cedric/Programa/Mario/Utils.jl:64.
 To fix, define 
     valid_index(AbstractArray{#T&lt;:Any, 1}, Base.IteratorsMD.CartesianIndex{1})
 before the new definition.
-WARNING: [a,b] concatenation is deprecated; use [a;b] instead
 </pre>
 </div>
 </div>
@@ -241,6 +227,8 @@ WARNING: [a,b] concatenation is deprecated; use [a;b] instead
     <span class="n">typename</span> <span class="o">=</span> <span class="n">gensym</span><span class="p">(</span><span class="s">&quot;Closure&quot;</span><span class="p">)</span>
     <span class="n">temp_fun</span> <span class="o">=</span> <span class="n">gensym</span><span class="p">(</span><span class="s">&quot;Helper&quot;</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">gensym</span><span class="p">(</span><span class="s">&quot;T&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="k">in</span> <span class="n">closed_var_list</span><span class="p">]</span>
+    <span class="c"># Macro to quickly create an immutable, eg.:</span>
+    <span class="c"># @qimmutable Car(size, ndoors::Int)</span>
     <span class="n">type_expr</span> <span class="o">=</span> <span class="p">:(@</span><span class="n">qimmutable</span><span class="p">(</span><span class="o">$</span><span class="n">typename</span><span class="p">{</span><span class="o">$</span><span class="p">(</span><span class="n">params</span><span class="o">...</span><span class="p">)}(</span><span class="o">$</span><span class="p">([:(</span><span class="o">$</span><span class="n">cv</span><span class="p">::</span><span class="o">$</span><span class="n">param</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span> <span class="k">in</span> <span class="n">zip</span><span class="p">(</span><span class="n">closed_var_list</span><span class="p">,</span> <span class="n">params</span><span class="p">)]</span><span class="o">...</span><span class="p">))))</span>
     <span class="n">execute_body_expr</span> <span class="o">=</span> <span class="p">:(</span><span class="o">$</span><span class="n">temp_fun</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="n">union</span><span class="p">(</span><span class="n">arglist</span><span class="p">,</span> <span class="n">closed_var_list</span><span class="p">)</span><span class="o">...</span><span class="p">))</span> <span class="o">=</span> <span class="o">$</span><span class="n">body</span><span class="p">)</span>
     <span class="n">call_expr</span> <span class="o">=</span> <span class="p">:(</span><span class="n">Base</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">instance</span><span class="p">::</span><span class="o">$</span><span class="n">typename</span><span class="p">,</span> <span class="o">$</span><span class="p">(</span><span class="n">arglist</span><span class="o">...</span><span class="p">))</span> <span class="o">=</span> <span class="o">$</span><span class="n">temp_fun</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="n">arglist</span><span class="o">...</span><span class="p">),</span> <span class="o">$</span><span class="p">(</span><span class="n">map</span><span class="p">(</span><span class="n">cv</span><span class="o">-&gt;</span><span class="p">:(</span><span class="n">instance</span><span class="o">.$</span><span class="n">cv</span><span class="p">),</span> <span class="n">closed_var_list</span><span class="p">)</span><span class="o">...</span><span class="p">)))</span>
@@ -270,30 +258,6 @@ WARNING: [a,b] concatenation is deprecated; use [a;b] instead
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area"><div class="prompt"></div>
-<div class="output_subarea output_stream output_stderr output_text">
-<pre> in depwarn at deprecated.jl:73
- in oldstyle_vcat_warning at /Applications/Julia-0.4.3.app/Contents/Resources/julia/lib/julia/sys.dylib
- in vect at abstractarray.jl:38
- in find_in_path at /Users/cedric/.julia/v0.4/Autoreload/src/files.jl:11
- in find_file at /Users/cedric/.julia/v0.4/Autoreload/src/files.jl:40
- in arequire at /Users/cedric/.julia/v0.4/Autoreload/src/Autoreload.jl:50
- in include_string at loading.jl:266
- in execute_request_0x535c5df2 at /Users/cedric/.julia/v0.4/IJulia/src/execute_request.jl:177
- in eventloop at /Users/cedric/.julia/v0.4/IJulia/src/IJulia.jl:141
- in anonymous at task.jl:447
-while loading In[1], in expression starting on line 7
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered">
 <div class="prompt input_prompt">
@@ -311,7 +275,7 @@ while loading In[1], in expression starting on line 7
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="c"># Immutable seems like a better choice...?</span>
-<span class="n">typename</span><span class="p">,</span> <span class="n">type_expr</span><span class="p">,</span> <span class="n">execute_body_expr</span><span class="p">,</span> <span class="n">call_expr</span> <span class="o">=</span> <span class="n">type_definition</span><span class="p">((:</span><span class="n">x</span><span class="p">,),</span> <span class="p">(:</span><span class="n">y</span><span class="p">,:</span><span class="n">z</span><span class="p">),</span> <span class="p">:(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">))</span>
+<span class="n">typename</span><span class="p">,</span> <span class="n">type_expr</span><span class="p">,</span> <span class="n">execute_body_expr</span><span class="p">,</span> <span class="n">call_expr</span> <span class="o">=</span> <span class="n">type_definition</span><span class="p">((:</span><span class="n">x</span><span class="p">,),</span> <span class="p">(:</span><span class="n">y</span><span class="p">,),</span> <span class="p">:(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">))</span>
 <span class="n">macroexpand</span><span class="p">(</span><span class="n">type_expr</span><span class="p">)</span>
 </pre></div>
 
@@ -327,9 +291,8 @@ while loading In[1], in expression starting on line 7
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>:(immutable ##Closure#7863{##T#7865,##T#7866}
-        y::##T#7865
-        z::##T#7866
+<pre>:(immutable ##Closure#7733{##T#7735}
+        y::##T#7735
     end)</pre>
 </div>
 
@@ -359,7 +322,7 @@ while loading In[1], in expression starting on line 7
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>:(##Helper#7864(x,y,z) = begin  # In[2], line 6:
+<pre>:(##Helper#7734(x,y) = begin  # In[2], line 8:
             x + y
         end)</pre>
 </div>
@@ -390,8 +353,8 @@ while loading In[1], in expression starting on line 7
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>:(Base.call(instance::##Closure#7863,x) = begin  # In[2], line 7:
-            ##Helper#7864(x,instance.y,instance.z)
+<pre>:(Base.call(instance::##Closure#7733,x) = begin  # In[2], line 9:
+            ##Helper#7734(x,instance.y)
         end)</pre>
 </div>
 
@@ -486,6 +449,35 @@ while loading In[1], in expression starting on line 7
 </div>
 
 </div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-julia"><pre><span class="n">offset</span> <span class="o">=</span> <span class="mf">1.2</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[8]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>1.2</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
 <div class="cell border-box-sizing text_cell rendered">
 <div class="prompt input_prompt">
 </div>
@@ -498,7 +490,7 @@ while loading In[1], in expression starting on line 7
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">normal_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="o">^</span><span class="mi">7</span><span class="p">)</span> <span class="c"># using regular closures</span>
@@ -513,18 +505,18 @@ while loading In[1], in expression starting on line 7
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[20]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[9]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 1.10 s [1.04 s, 1.16 s]
-Proportion of time in GC: 7.31% [7.07%, 7.55%]
+     Time per evaluation: 1.11 s [927.88 ms, 1.28 s]
+Proportion of time in GC: 3.55% [3.14%, 3.97%]
         Memory allocated: 610.35 mb
    Number of allocations: 40000000 allocations
        Number of samples: 7
    Number of evaluations: 7
- Time spent benchmarking: 9.02 s
+ Time spent benchmarking: 9.10 s
 </pre>
 </div>
 
@@ -536,7 +528,7 @@ Proportion of time in GC: 7.31% [7.07%, 7.55%]
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">anon_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(@</span><span class="n">anon</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">),</span> <span class="mi">10</span><span class="o">^</span><span class="mi">7</span><span class="p">)</span>
@@ -551,18 +543,18 @@ Proportion of time in GC: 7.31% [7.07%, 7.55%]
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[21]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[10]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 77.96 ms [67.66 ms, 88.25 ms]
-Proportion of time in GC: 0.11% [0.00%, 0.76%]
-        Memory allocated: 1.05 kb
-   Number of allocations: 39 allocations
+     Time per evaluation: 63.40 ms [59.53 ms, 67.28 ms]
+Proportion of time in GC: 0.07% [0.00%, 0.52%]
+        Memory allocated: 1.08 kb
+   Number of allocations: 41 allocations
        Number of samples: 100
    Number of evaluations: 100
- Time spent benchmarking: 8.08 s
+ Time spent benchmarking: 6.68 s
 </pre>
 </div>
 
@@ -574,7 +566,7 @@ Proportion of time in GC: 0.11% [0.00%, 0.76%]
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">anon2_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(@</span><span class="n">anon2</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">),</span> <span class="mi">10</span><span class="o">^</span><span class="mi">7</span><span class="p">)</span>
@@ -589,18 +581,18 @@ Proportion of time in GC: 0.11% [0.00%, 0.76%]
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[22]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[11]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 48.21 ms [45.43 ms, 50.99 ms]
+     Time per evaluation: 47.27 ms [44.91 ms, 49.64 ms]
 Proportion of time in GC: 0.00% [0.00%, 0.00%]
-        Memory allocated: 0.00 bytes
-   Number of allocations: 0 allocations
+        Memory allocated: 48.00 bytes
+   Number of allocations: 3 allocations
        Number of samples: 100
    Number of evaluations: 100
- Time spent benchmarking: 5.13 s
+ Time spent benchmarking: 4.97 s
 </pre>
 </div>
 
@@ -623,7 +615,7 @@ Proportion of time in GC: 0.00% [0.00%, 0.00%]
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">normal_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
@@ -638,19 +630,19 @@ Proportion of time in GC: 0.00% [0.00%, 0.00%]
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[28]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[12]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 10.88 μs [10.54 μs, 11.23 μs]
-Proportion of time in GC: 1.21% [0.56%, 1.86%]
+     Time per evaluation: 10.84 μs [10.57 μs, 11.12 μs]
+Proportion of time in GC: 0.00% [0.00%, 0.00%]
         Memory allocated: 6.25 kb
    Number of allocations: 400 allocations
-       Number of samples: 5901
-   Number of evaluations: 554601
-         R² of OLS model: 0.855
- Time spent benchmarking: 10.23 s
+       Number of samples: 2901
+   Number of evaluations: 31101
+         R² of OLS model: 0.952
+ Time spent benchmarking: 1.85 s
 </pre>
 </div>
 
@@ -662,7 +654,7 @@ Proportion of time in GC: 1.21% [0.56%, 1.86%]
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">anon_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(@</span><span class="n">anon</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">),</span> <span class="mi">10</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
@@ -677,19 +669,19 @@ Proportion of time in GC: 1.21% [0.56%, 1.86%]
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[24]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[13]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 45.67 ms [20.49 ms, 70.85 ms]
-Proportion of time in GC: 0.50% [0.00%, 1.48%]
-        Memory allocated: 1.03 kb
-   Number of allocations: 38 allocations
-       Number of samples: 201
-   Number of evaluations: 501
-         R² of OLS model: 0.373
- Time spent benchmarking: 17.10 s
+     Time per evaluation: 20.59 ms [13.99 ms, 27.19 ms]
+Proportion of time in GC: 0.62% [0.00%, 1.66%]
+        Memory allocated: 1.06 kb
+   Number of allocations: 40 allocations
+       Number of samples: 301
+   Number of evaluations: 801
+         R² of OLS model: 0.540
+ Time spent benchmarking: 12.88 s
 </pre>
 </div>
 
@@ -701,7 +693,7 @@ Proportion of time in GC: 0.50% [0.00%, 1.48%]
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-julia"><pre><span class="n">anon2_foo</span><span class="p">()</span> <span class="o">=</span> <span class="n">testn</span><span class="p">(@</span><span class="n">anon2</span><span class="p">(</span><span class="n">x</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">offset</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">),</span> <span class="mi">10</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
@@ -716,37 +708,24 @@ Proportion of time in GC: 0.50% [0.00%, 1.48%]
 <div class="output">
 
 
-<div class="output_area"><div class="prompt output_prompt">Out[29]:</div>
+<div class="output_area"><div class="prompt output_prompt">Out[14]:</div>
 
 
 <div class="output_text output_subarea output_execute_result">
 <pre>================ Benchmark Results ========================
-     Time per evaluation: 499.63 ns [488.48 ns, 510.78 ns]
+     Time per evaluation: 1.29 μs [1.26 μs, 1.32 μs]
 Proportion of time in GC: 0.00% [0.00%, 0.00%]
-        Memory allocated: 0.00 bytes
-   Number of allocations: 0 allocations
-       Number of samples: 3601
-   Number of evaluations: 61601
-         R² of OLS model: 0.953
- Time spent benchmarking: 2.42 s
+        Memory allocated: 32.00 bytes
+   Number of allocations: 2 allocations
+       Number of samples: 2701
+   Number of evaluations: 25501
+         R² of OLS model: 0.957
+ Time spent benchmarking: 1.50 s
 </pre>
 </div>
 
 </div>
 
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-julia"><pre><span class="n">Pkg</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="s">&quot;FastAnonymous&quot;</span><span class="p">)</span>
-</pre></div>
-
-</div>
 </div>
 </div>
 
