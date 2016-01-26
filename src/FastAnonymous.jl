@@ -58,6 +58,35 @@ end
 
 anon_usage() = error("Usage: f = @anon x -> x+a")
 
+""" `build_parametric_type(arglist, closed_var_list, body)`
+
+Creates a type _at macro-expansion-time_ that behaves like the closure.
+Returns the type name. """
+function build_parametric_type(arglist, closed_var_list, body)
+    typename = gensym("Closure")
+    temp_fun = gensym("Helper")
+    params = [gensym("T") for _ in closed_var_list]
+    typename_w_params = :($typename{$(params...)})
+    fields = [:($cv::$param) for (cv, param) in zip(closed_var_list, params)]
+    # Creates a type like:
+    # :(immutable ##Closure#8229{##T#8231}
+    #    y::##T#8231
+    # end)
+    eval(Expr(:type, false, typename_w_params, Expr(:block, fields...)))
+    # This function will execute the body of the closure
+    # :(##Helper#8230(x,y) = begin
+    #        x + y
+    #    end)
+    eval(:($temp_fun($(union(arglist, closed_var_list)...)) = $body))
+    # :(Base.call(instance::##Closure#8229,x) = begin
+    #        ##Helper#8230(x,instance.y)
+    #    end)
+    eval(:(call(instance::$typename, $(arglist...)) = 
+           $temp_fun($(arglist...),
+                     $(map(cv->:(instance.$cv), closed_var_list)...))))
+    return typename
+end
+
 macro anon(ex)
     (isa(ex,Expr) && ex.head in (:function, :->)) || anon_usage()
     arglist = tupleargs(ex.args[1])
@@ -68,11 +97,8 @@ macro anon(ex)
     if isempty(syms)
         return :(Fun($(esc(qbody)), $arglist))
     end
-    symst = tuple(syms...)
-    # fields = map(x->Val{x}, symst)
-    fields = Val{symst}
-    values = Expr(:tuple, [esc(v) for v in symst]...)
-    :(closure($(esc(qbody)), $arglist, $fields, $values))
+    ftype = build_parametric_type(arglist, tuple(syms...), scopedbody)
+    :($ftype($(map(esc, syms)...)))
 end
 
 #### closure generates types as needed
