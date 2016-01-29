@@ -65,6 +65,7 @@ Returns the type name. """
 function build_parametric_type(arglist, closed_var_list, body)
     typename = gensym("Closure")
     temp_fun = gensym("Helper")
+    instance = gensym("instance")
     params = [gensym("T") for _ in closed_var_list]
     typename_w_params = :($typename{$(params...)})
     fields = [:($cv::$param) for (cv, param) in zip(closed_var_list, params)]
@@ -73,7 +74,7 @@ function build_parametric_type(arglist, closed_var_list, body)
     #    y::##T#8231
     # end)
     eval(Expr(:type, false, typename_w_params, Expr(:block, fields...)))
-    # This function will execute the body of the closure
+    # This function executes the body of the closure
     # :(##Helper#8230(x,y) = begin
     #        x + y
     #    end)
@@ -81,9 +82,9 @@ function build_parametric_type(arglist, closed_var_list, body)
     # :(Base.call(instance::##Closure#8229,x) = begin
     #        ##Helper#8230(x,instance.y)
     #    end)
-    eval(:(call(instance::$typename, $(arglist...)) = 
+    eval(:(call($instance::$typename, $(arglist...)) = 
            $temp_fun($(arglist...),
-                     $(map(cv->:(instance.$cv), closed_var_list)...))))
+                     $(map(cv->:($instance.$cv), closed_var_list)...))))
     return typename
 end
 
