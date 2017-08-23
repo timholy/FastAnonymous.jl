@@ -4,6 +4,15 @@ Creating efficient "anonymous functions" in [Julia](http://julialang.org/).
 
 [![Build Status](https://travis-ci.org/timholy/FastAnonymous.jl.svg?branch=master)](https://travis-ci.org/timholy/FastAnonymous.jl)
 
+# Note: this package is deprecated
+
+FastAnonymous provoked/inspired the creation of fast anonymous
+functions as a native feature for Julia 0.5. Hence this package is not
+necessary (and not supported) for Julia 0.5 and higher. Starting with
+Julia 0.7, this package will not be installable by the package manager.
+
+## FastAnonymous versions
+
 There are two implementations, one that runs on julia 0.3 and the other for julia 0.4.
 If you're running julia 0.3, see the relevant [README](doc/README_0.3.md).
 
